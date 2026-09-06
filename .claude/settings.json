@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node bin/porque.js capture --hook --quiet", "timeout": 180 }
+        ]
+      }
+    ]
+  }
+}

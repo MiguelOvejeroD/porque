@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>porque</title>
+<meta name="description" content="git blame para el por qué. Una PoC para equipos que programan con IA y pierden el razonamiento detrás de cada decisión.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --paper: #F2F4EF; --paper-2: #E7EBE3; --ink: #171D1A; --ink-2: #56615B; --line: #C9D0C7;
+    --acc: #1D6B5A; --acc-soft: #D6E9E1; --rust: #B5432A; --rust-soft: #F3DBD3;
+    --term-bg: #151B18; --term-fg: #E4EAE4; --term-dim: #8E9A92; --term-acc: #6FCDB1; --term-rust: #F08A6C; --term-mag: #D6A3E8; --term-cyan: #7FD3E6;
+    --shadow: 0 24px 60px -30px rgba(23, 29, 26, .45);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #11171A; --paper-2: #171F22; --ink: #E6EBE6; --ink-2: #98A39C; --line: #2A3438;
+      --acc: #5DBCA1; --acc-soft: #163029; --rust: #E37B5C; --rust-soft: #3B2119;
+      --shadow: 0 24px 60px -30px rgba(0, 0, 0, .8);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #11171A; --paper-2: #171F22; --ink: #E6EBE6; --ink-2: #98A39C; --line: #2A3438;
+    --acc: #5DBCA1; --acc-soft: #163029; --rust: #E37B5C; --rust-soft: #3B2119;
+    --shadow: 0 24px 60px -30px rgba(0, 0, 0, .8);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-snap-type: y proximity; scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif; font-size: 18px; line-height: 1.5;
+    font-optical-sizing: auto;
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+
+  .display { font-family: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif; font-optical-sizing: auto; text-wrap: balance; letter-spacing: -0.015em; }
+  .mono { font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+  .slide {
+    min-height: 100svh; scroll-snap-align: start; position: relative;
+    display: grid; grid-template-columns: 11rem minmax(0, 1fr); border-top: 1px solid var(--line);
+  }
+  .slide:first-of-type { border-top: 0; }
+  .gutter {
+    border-right: 1px solid var(--line); padding: 1.5rem 1rem; font-size: 12px; line-height: 1.6; color: var(--ink-2);
+    display: flex; flex-direction: column; gap: .35rem; position: sticky; top: 0; align-self: start; height: 100svh;
+  }
+  .gutter .n { color: var(--acc); font-weight: 700; }
+  .gutter .ref { word-break: break-all; }
+  .gutter .spacer { flex: 1; }
+  .page { padding: clamp(2rem, 5vh, 4rem) clamp(1.5rem, 5vw, 5rem); max-width: 78rem; width: 100%; display: flex; flex-direction: column; justify-content: center; gap: 1.75rem; }
+
+  .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--acc); font-weight: 700; }
+  h1, h2 { margin: 0; font-weight: 600; line-height: 1.05; }
+  h1 { font-size: clamp(3.2rem, 9vw, 8.5rem); font-weight: 700; letter-spacing: -0.03em; }
+  h2 { font-size: clamp(1.9rem, 3.8vw, 3.4rem); }
+  h3 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+  p { margin: 0; max-width: 62ch; }
+  .lede { font-size: clamp(1.15rem, 1.6vw, 1.45rem); line-height: 1.4; }
+  .muted { color: var(--ink-2); }
+  .rust { color: var(--rust); }
+  .acc { color: var(--acc); }
+  em { font-style: italic; }
+  a { color: var(--acc); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.5rem 2.5rem; align-items: start; }
+  .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 2.5rem; align-items: center; }
+
+  /* Visual 1: blame table with an empty "why" column */
+  .blame { width: 100%; border: 1px solid var(--line); background: var(--paper-2); font-size: 13px; overflow-x: auto; box-shadow: var(--shadow); }
+  .blame table { border-collapse: collapse; width: 100%; min-width: 40rem; }
+  .blame th { text-align: left; font-weight: 500; color: var(--ink-2); padding: .6rem .9rem; border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+  .blame td { padding: .45rem .9rem; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
+  .blame tr:last-child td { border-bottom: 0; }
+  .blame .h { color: var(--ink-2); }
+  .blame .a { color: var(--ink-2); }
+  .blame .code { color: var(--ink); }
+  .blame .why { color: var(--rust); border-left: 1px dashed var(--line); font-family: "Source Serif 4", serif; font-style: italic; }
+  .blame tr.got .why { color: var(--acc); font-style: normal; background: var(--acc-soft); white-space: normal; min-width: 18rem; }
+  .k { color: var(--acc); }
+
+  /* Visual 2: Tuesday / Thursday */
+  .days { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.5rem; align-items: stretch; }
+  .day { border: 1px solid var(--line); background: var(--paper-2); padding: 1.25rem 1.4rem; display: flex; flex-direction: column; gap: .9rem; }
+  .day .who { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  .day .who b { font-family: "Bricolage Grotesque", sans-serif; font-size: 1.15rem; font-weight: 700; }
+  .chat { border-left: 3px solid var(--acc); padding: .2rem 0 .2rem .9rem; font-size: .95rem; display: grid; gap: .4rem; }
+  .chat.lost { border-left-color: var(--rust); }
+  .chat .l { position: relative; }
+  .chat.fade .l:nth-child(1) { opacity: .95; } .chat.fade .l:nth-child(2) { opacity: .7; } .chat.fade .l:nth-child(3) { opacity: .45; }
+  .commit { font-size: 12.5px; padding: .55rem .8rem; border: 1px solid var(--line); background: var(--paper); display: flex; gap: .8rem; align-items: baseline; }
+  .commit .h { color: var(--ink-2); }
+  .between { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; color: var(--rust); font-size: 12px; text-align: center; min-width: 6rem; }
+  .between .wire { width: 1px; flex: 1; border-left: 2px dashed var(--rust); opacity: .6; }
+  .between .x { font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.5rem; line-height: 1; }
+
+  /* Visual 3: flow */
+  .flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; align-items: stretch; }
+  .node { border: 1px solid var(--line); background: var(--paper-2); padding: .9rem 1rem; display: flex; flex-direction: column; gap: .35rem; position: relative; min-height: 7.5rem; }
+  .node .t { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1rem; }
+  .node .d { font-size: .85rem; color: var(--ink-2); line-height: 1.35; }
+  .node .m { font-size: 11px; color: var(--acc); }
+  .node.core { border-color: var(--acc); background: var(--acc-soft); }
+  .node::after { content: "→"; position: absolute; right: -0.95rem; top: 50%; transform: translateY(-55%); color: var(--acc); font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.3rem; z-index: 1; }
+  .node:last-child::after { content: ""; }
+  .flow2 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; margin-top: -.25rem; }
+  .flow2 .drop { grid-column: 3; display: flex; justify-content: center; color: var(--acc); font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.3rem; line-height: 1; }
+  .flow2 .out { grid-column: 2 / span 3; display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .loop { font-size: 12px; color: var(--acc); display: flex; align-items: center; gap: .5rem; }
+  .loop::before { content: ""; flex: 1; border-top: 1px dashed var(--acc); }
+  .loop::after { content: ""; flex: 1; border-top: 1px dashed var(--acc); }
+
+  /* Terminal */
+  .term { background: var(--term-bg); color: var(--term-fg); border-radius: 6px; box-shadow: var(--shadow); overflow: hidden; font-size: 13px; line-height: 1.55; }
+  .term .bar { display: flex; gap: .45rem; padding: .6rem .9rem; border-bottom: 1px solid rgba(255,255,255,.08); align-items: center; }
+  .term .bar i { width: 10px; height: 10px; border-radius: 50%; background: #3A4642; display: inline-block; }
+  .term .bar span { margin-left: .5rem; color: var(--term-dim); font-size: 12px; }
+  .term pre { margin: 0; padding: 1rem 1.2rem 1.2rem; overflow-x: auto; white-space: pre; }
+  .term .p { color: var(--term-dim); }
+  .term .c { color: var(--term-cyan); }
+  .term .g { color: var(--term-acc); }
+  .term .r { color: var(--term-rust); }
+  .term .m { color: var(--term-mag); }
+  .term .d { color: var(--term-dim); }
+  .term b { color: #fff; font-weight: 700; }
+
+  .steps { counter-reset: s; display: grid; gap: 1.1rem; }
+  .step { display: grid; grid-template-columns: 2.2rem 1fr; gap: .75rem; align-items: baseline; }
+  .step::before { counter-increment: s; content: counter(s); font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; color: var(--acc); font-size: 1.4rem; line-height: 1; }
+  .step p { font-size: 1rem; }
+
+  .cmd { display: inline-block; background: var(--paper-2); border: 1px solid var(--line); padding: .55rem .9rem; font-size: 14px; color: var(--ink); }
+  .cmd .p { color: var(--acc); }
+  .stack { display: grid; gap: .6rem; }
+  .cta { display: inline-flex; align-items: center; gap: .6rem; background: var(--acc); color: var(--paper); text-decoration: none; padding: .85rem 1.3rem; font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 1.05rem; border-radius: 3px; }
+  .cta:hover { filter: brightness(1.08); }
+  .tag { display: inline-block; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; padding: .2rem .5rem; border: 1px solid var(--line); color: var(--ink-2); }
+  .footer { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 1.25rem; font-size: .9rem; color: var(--ink-2); }
+
+  /* nav */
+  .dots { position: fixed; right: 1.1rem; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: .55rem; z-index: 5; }
+  .dots a { width: 8px; height: 8px; border-radius: 50%; background: var(--line); display: block; transition: background .2s, transform .2s; }
+  .dots a.on { background: var(--acc); transform: scale(1.35); }
+  .hint { position: fixed; bottom: 1rem; right: 1.25rem; font-size: 11px; color: var(--ink-2); z-index: 5; }
+
+  @media (max-width: 900px) {
+    .slide { grid-template-columns: 1fr; }
+    .gutter { position: static; height: auto; flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); padding: .8rem 1.25rem; }
+    .gutter .spacer, .gutter .hide-m { display: none; }
+    .two { grid-template-columns: 1fr; }
+    .days { grid-template-columns: 1fr; }
+    .between { flex-direction: row; min-height: 3rem; } .between .wire { border-left: 0; border-top: 2px dashed var(--rust); height: 1px; width: auto; }
+    .flow { grid-template-columns: 1fr; }
+    .node::after { content: "↓"; right: auto; left: 50%; top: auto; bottom: -1.05rem; transform: translateX(-50%); }
+    .flow2 { grid-template-columns: 1fr; } .flow2 .drop, .flow2 .out { grid-column: 1; } .flow2 .out { grid-template-columns: 1fr; }
+    .dots, .hint { display: none; }
+    body { font-size: 17px; }
+  }
+</style>
+
+<nav class="dots" aria-label="Slides">
+  <a href="#s1" class="on" aria-label="Portada"></a><a href="#s2" aria-label="El problema"></a><a href="#s3" aria-label="Por qué ahora"></a><a href="#s4" aria-label="La solución"></a><a href="#s5" aria-label="porque why"></a><a href="#s6" aria-label="porque check"></a><a href="#s7" aria-label="Probalo"></a>
+</nav>
+<div class="hint mono">↑ ↓ para navegar</div>
+
+<!-- 1 · Portada -->
+<section class="slide" id="s1">
+  <aside class="gutter mono"><span class="n">HEAD</span><span class="ref">porque · v0.1.0</span><span class="hide-m">PoC · 2026-09</span><span class="spacer"></span><span class="hide-m">1 / 7</span></aside>
+  <div class="page">
+    <div class="eyebrow">Una PoC para equipos que programan con IA</div>
+    <h1 class="display">porque</h1>
+    <p class="lede"><span class="display" style="font-weight:600">git blame para el por qué.</span> Git recuerda qué cambió. Nadie recuerda por qué. Y ahora el por qué vive en un chat que se cierra a las seis de la tarde.</p>
+    <div class="blame mono" role="img" aria-label="Una vista tipo git blame donde la columna por qué está vacía en todas las líneas salvo la última, que porque completa.">
+      <table>
+        <thead><tr><th>commit</th><th>autor</th><th>src/api/payments.ts</th><th>por qué</th></tr></thead>
+        <tbody>
+          <tr><td class="h">3f9a2c1</td><td class="a">Lu</td><td class="code"><span class="k">import</span> { z } <span class="k">from</span> 'zod';</td><td class="why">—</td></tr>
+          <tr><td class="h">3f9a2c1</td><td class="a">Lu</td><td class="code">amount: z.number().int().positive(),</td><td class="why">—</td></tr>
+          <tr><td class="h">3f9a2c1</td><td class="a">Lu</td><td class="code">currency: z.enum(['ARS', 'USD']),</td><td class="why">—</td></tr>
+          <tr><td class="h">3f9a2c1</td><td class="a">Lu</td><td class="code"><span class="k">const</span> key = req.headers['idempotency-key'];</td><td class="why">—</td></tr>
+          <tr><td class="h">3f9a2c1</td><td class="a">Lu</td><td class="code"><span class="k">return</span> withIdempotency(key, () =&gt; charge(data));</td><td class="why">—</td></tr>
+          <tr class="got"><td class="h">porque</td><td class="a">Lu · IA</td><td class="code">amount: z.number().int().positive(),</td><td class="why">Centavos como entero: los floats de JS no representan exactamente los decimales y en pagos eso termina en diferencias de un centavo. Convención de Stripe y Mercado Pago. Descartado: Decimal (dependencia extra, serializa como string).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · El problema -->
+<section class="slide" id="s2">
+  <aside class="gutter mono"><span class="n">demo/</span><span class="ref">session.jsonl</span><span class="hide-m">mar 01/09 · Lu</span><span class="hide-m">jue 03/09 · Tomi</span><span class="spacer"></span><span class="hide-m">2 / 7</span></aside>
+  <div class="page">
+    <div class="eyebrow">El problema, en dos días</div>
+    <h2 class="display">Nadie hizo nada mal.</h2>
+    <div class="days">
+      <div class="day">
+        <div class="who"><b>Martes · Lu</b><span class="tag">Lu + su IA</span></div>
+        <p class="muted" style="font-size:.95rem">"Armá el endpoint POST /payments. Que valide el body y que no cobre dos veces si reintentan."</p>
+        <div class="chat fade" aria-label="Razonamiento de la IA de Lu, que se va desvaneciendo">
+          <div class="l">Elijo <b>zod</b> y no yup: infiere los tipos TS del schema, lo vamos a necesitar para la config y para Stripe, y los errores son legibles.</div>
+          <div class="l"><b>amount</b> en centavos como entero: los floats no representan decimales exactos.</div>
+          <div class="l"><b>Idempotency-Key</b> en Redis con TTL 24h, la ventana que usa Stripe.</div>
+        </div>
+        <div class="commit mono"><span class="h">3f9a2c1</span><span>feat(payments): POST /payments</span></div>
+      </div>
+      <div class="between mono"><div class="wire"></div><div class="x">×</div><div>nada de esto<br>viaja al jueves</div><div class="wire"></div></div>
+      <div class="day">
+        <div class="who"><b>Jueves · Tomi</b><span class="tag">Tomi + su IA</span></div>
+        <p class="muted" style="font-size:.95rem">"Hay un bug de validación en payments.ts, arreglalo."</p>
+        <div class="chat lost" aria-label="Lo que hace la IA de Tomi sin conocer las razones de Lu">
+          <div class="l">Reescribe la validación con <b>yup</b>, que conoce mejor.</div>
+          <div class="l">Acepta <b>1999.99</b> como float. "Los precios tienen decimales."</div>
+          <div class="l">Saca el chequeo de idempotencia. "No estaba en los requerimientos."</div>
+        </div>
+        <div class="commit mono"><span class="h">b21e0f4</span><span>refactor: switch validation to yup</span></div>
+      </div>
+    </div>
+    <p class="lede">Las dos IAs razonaron bien. La segunda nunca vio el razonamiento de la primera. <span class="rust">El commit guardó el qué; el por qué murió con la pestaña.</span></p>
+  </div>
+</section>
+
+<!-- 3 · Por qué ahora -->
+<section class="slide" id="s3">
+  <aside class="gutter mono"><span class="n">$</span><span class="ref">git log --format=%s</span><span class="hide-m">el qué, sin el por qué</span><span class="spacer"></span><span class="hide-m">3 / 7</span></aside>
+  <div class="page">
+    <div class="eyebrow">Por qué ahora</div>
+    <h2 class="display">Esto siempre pasó. Pero pasaba a ritmo humano.</h2>
+    <div class="cols">
+      <div class="stack">
+        <h3 class="display">Antes</h3>
+        <p>Las decisiones técnicas se tomaban en reuniones, PRs largos y hilos de Slack. Pocas por semana. Alguien se acordaba, y con eso alcanzaba.</p>
+      </div>
+      <div class="stack">
+        <h3 class="display">Ahora</h3>
+        <p>Cada persona toma decenas de decisiones por día conversando con su asistente. Qué librería, qué patrón, qué se descartó. El razonamiento suele ser bueno. Y es privado.</p>
+      </div>
+      <div class="stack">
+        <h3 class="display">El agravante</h3>
+        <p>La IA de cada uno no conoce lo que decidió la IA de los demás. Así que se contradicen entre sí, con excelentes argumentos las dos.</p>
+      </div>
+    </div>
+    <p class="lede">El volumen de decisiones se multiplicó. <em>La memoria del equipo siguió siendo la misma.</em> Los ADR formales no escalan a este ritmo: nadie va a escribir treinta documentos por día. Hay que capturar donde la decisión nace: en la sesión.</p>
+  </div>
+</section>
+
+<!-- 4 · La solución -->
+<section class="slide" id="s4">
+  <aside class="gutter mono"><span class="n">src/</span><span class="ref">capture.js</span><span class="ref">sync.js</span><span class="ref">why.js · check.js</span><span class="spacer"></span><span class="hide-m">4 / 7</span></aside>
+  <div class="page">
+    <div class="eyebrow">La solución</div>
+    <h2 class="display">Capturar el por qué donde nace y dejarlo donde la próxima sesión lo lee.</h2>
+    <div class="flow" role="img" aria-label="Flujo: sesión con IA, hook Stop, decisions/*.md, CLAUDE.md, próxima sesión. Desde decisions salen porque why y porque check.">
+      <div class="node"><div class="t">Sesión con IA</div><div class="d">Lu trabaja normal con Claude Code. Nadie escribe nada extra.</div><div class="m mono">transcript .jsonl</div></div>
+      <div class="node"><div class="t">Hook Stop</div><div class="d">Al final de cada respuesta lee solo lo nuevo del transcript y le pide al modelo decisiones, no tareas.</div><div class="m mono">porque capture</div></div>
+      <div class="node core"><div class="t">decisions/*.md</div><div class="d">Un archivo por decisión: qué, por qué, alternativas descartadas, consecuencias, scope. Markdown, en el repo.</div><div class="m mono">git add decisions/</div></div>
+      <div class="node"><div class="t">CLAUDE.md</div><div class="d">Las activas se inyectan en el contexto compartido con una instrucción: respetarlas y avisar antes de contradecir.</div><div class="m mono">porque sync</div></div>
+      <div class="node"><div class="t">Próxima sesión</div><div class="d">La de Tomi, el jueves. Arranca sabiendo lo que decidió Lu el martes.</div><div class="m mono">contexto compartido</div></div>
+    </div>
+    <div class="flow2">
+      <div class="drop">↓</div>
+      <div class="out">
+        <div class="node"><div class="t mono">porque why src/api/payments.ts</div><div class="d">Qué decisiones gobiernan este path, con su razonamiento, más el git log. Y qué no está registrado.</div></div>
+        <div class="node"><div class="t mono">porque check --ask</div><div class="d">En el PR: qué decisiones toca el cambio y si las respeta o las contradice. Informa; bloquea solo con --strict.</div></div>
+      </div>
+    </div>
+    <p class="muted">Sin base de datos, sin servicio, sin cuenta. Cero dependencias. Si borrás la herramienta, los archivos siguen ahí.</p>
+  </div>
+</section>
+
+<!-- 5 · why -->
+<section class="slide" id="s5">
+  <aside class="gutter mono"><span class="n">$</span><span class="ref">porque why</span><span class="hide-m">salida real del demo</span><span class="spacer"></span><span class="hide-m">5 / 7</span></aside>
+  <div class="page">
+    <div class="two">
+      <div class="stack" style="gap:1.25rem">
+        <div class="eyebrow">Así se ve</div>
+        <h2 class="display">"¿Por qué este archivo es así?"</h2>
+        <p>Salida real de la PoC sobre la sesión del martes. Tres decisiones, cada una con el razonamiento que la IA de Lu dio en el chat y las alternativas que descartó. Nadie escribió esto a mano.</p>
+        <p class="muted">Cuando no hay nada registrado, lo dice: <em>"Eso también es información: nadie dejó escrito por qué esto es así."</em></p>
+      </div>
+      <div class="term mono" role="img" aria-label="Terminal con la salida de porque why src/api/payments.ts">
+        <div class="bar"><i></i><i></i><i></i><span>checkout-api · zsh</span></div>
+<pre><span class="p">$</span> porque why src/api/payments.ts
+
+<b>porque src/api/payments.ts</b>
+
+<span class="g">●</span> <b>Usar zod para validación de requests</b>  <span class="d">2026-09-01 · Lu</span>
+  Se adopta zod como librería de validación de body en la API,
+  infiriendo el tipo PaymentRequest directamente del schema.
+  <span class="c">Por qué:</span> infiere tipos TS desde el schema evitando duplicar tipo y
+  schema; el equipo lo va a necesitar igual para validar config de
+  entorno y respuestas de Stripe; sus errores son legibles para el front.
+  <span class="m">Descartado:</span> yup: inferencia de tipos más débil <span class="d">|</span> JSON Schema de
+  Fastify (ajv): dos fuentes de verdad (schema y tipo)
+  <span class="d">decisions/2026-09-01-usar-zod-para-validacion-de-requests.md · src/api/**</span>
+
+<span class="g">●</span> <b>Idempotencia de pagos vía header Idempotency-Key + Redis</b>  <span class="d">2026-09-01 · Lu</span>
+  POST /payments requiere un header Idempotency-Key (UUID).
+  <span class="c">Por qué:</span> evitar doble cobro por doble click o reintentos. Redis y no
+  Postgres porque ya está en el stack, el TTL es nativo y no ensucia la
+  tabla de pagos. 24h replica la convención de Stripe.
+  <span class="m">Descartado:</span> tabla en Postgres: expiración manual y basura de reintentos
+  <span class="d">decisions/2026-09-01-idempotencia-de-pagos-via-header-idempotency-key-redis.md</span>
+
+<span class="g">●</span> <b>Representar amount en centavos como entero</b>  <span class="d">2026-09-01 · Lu</span>
+  <span class="c">Por qué:</span> los floats de JavaScript no representan exactamente los
+  decimales (0.1 + 0.2 !== 0.3); en pagos eso genera diferencias de un
+  centavo en conciliaciones. Convención de Stripe y Mercado Pago.
+  <span class="m">Descartado:</span> Decimal (decimal.js / numeric): dependencia extra, string en JSON
+  <span class="d">decisions/2026-09-01-representar-amount-en-centavos-como-entero.md</span>
+
+<span class="d">Historial git de src/api/payments.ts:</span>
+<span class="d">  3f9a2c1 2026-09-01 Lu             feat(payments): POST /payments</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · check -->
+<section class="slide" id="s6">
+  <aside class="gutter mono"><span class="n">$</span><span class="ref">porque check --ask</span><span class="hide-m">el PR del jueves</span><span class="spacer"></span><span class="hide-m">6 / 7</span></aside>
+  <div class="page">
+    <div class="two">
+      <div class="term mono" role="img" aria-label="Terminal con la salida de porque check --ask marcando tres contradicciones">
+        <div class="bar"><i></i><i></i><i></i><span>checkout-api · fix/validation</span></div>
+<pre><span class="p">$</span> porque check --base main --ask
+
+<b>porque · 3 decisión(es) afectada(s) por este cambio</b>
+
+<span class="r">✖</span> <b>Usar zod para validación de requests</b> <span class="d">(2026-09-01)</span>
+  <span class="r">contradicts:</span> El diff usa 'yup' en lugar de 'zod' para validar
+  PaymentRequest en src/api/payments.ts, justo el endpoint que la
+  decisión menciona explícitamente como punto de partida para zod.
+
+<span class="r">✖</span> <b>Representar amount en centavos como entero</b> <span class="d">(2026-09-01)</span>
+  <span class="r">contradicts:</span> amount se valida como yup.number().positive() con un
+  comentario de ejemplo '1999.99', tratándolo como decimal/float en
+  lugar de entero en centavos como exige la decisión.
+
+<span class="r">✖</span> <b>Idempotencia de pagos vía header Idempotency-Key + Redis</b> <span class="d">(2026-09-01)</span>
+  <span class="r">contradicts:</span> El handler de POST /payments no exige ni lee el header
+  Idempotency-Key ni utiliza src/lib/idempotency.ts con Redis, cobrando
+  directamente vía chargeCustomer sin protección de idempotencia.
+
+<span class="d">  src/api/payments.ts · decisions/2026-09-01-…</span></pre>
+      </div>
+      <div class="stack" style="gap:1.25rem">
+        <div class="eyebrow">El jueves, con porque</div>
+        <h2 class="display">El PR de Tomi ya no pasa en silencio.</h2>
+        <p>Salida real del check sobre el commit del jueves. Las tres decisiones del martes aparecen en el PR con su razonamiento original y el veredicto del modelo.</p>
+        <p>Y antes de eso: la IA de Tomi ya arrancó la sesión con las decisiones de Lu en su contexto. Lo más probable es que el PR del jueves nunca haya existido así.</p>
+        <p class="muted">Contradecir una decisión a veces es correcto. Lo que no puede pasar es hacerlo sin saberlo. Por eso el check informa y solo bloquea con <span class="mono">--strict</span>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · Probalo -->
+<section class="slide" id="s7">
+  <aside class="gutter mono"><span class="n">$</span><span class="ref">npx --yes porque-cli init</span><span class="hide-m">MIT · Node 18+</span><span class="spacer"></span><span class="hide-m">7 / 7</span></aside>
+  <div class="page">
+    <div class="eyebrow">Probalo</div>
+    <h2 class="display">Sesenta segundos, un repo de prueba y una sesión grabada.</h2>
+    <div class="two" style="align-items:start">
+      <div class="steps">
+        <div class="step"><p>Cloná el repo y corré el demo. Crea un repo de prueba, reproduce la sesión del martes y pregunta <span class="mono">porque why</span>.</p></div>
+        <div class="step"><p>En tu propio repo: <span class="mono">npx --yes porque-cli init</span>. Crea <span class="mono">decisions/</span>, el bloque en <span class="mono">CLAUDE.md</span> y el hook de Claude Code. Después trabajás como siempre.</p></div>
+        <div class="step"><p>Sumá el workflow de GitHub Actions del repo para que cada PR muestre las decisiones que toca.</p></div>
+      </div>
+      <div class="stack">
+        <div class="cmd mono"><span class="p">$</span> git clone https://github.com/MiguelOvejeroD/porque<br><span class="p">$</span> cd porque &amp;&amp; npm run demo</div>
+        <div class="cmd mono"><span class="p">$</span> npx --yes porque-cli init<br><span class="p">$</span> porque why src/lo-que-sea</div>
+        <p class="muted" style="font-size:.95rem">Necesita Node 18+ y el CLI <span class="mono">claude</span> logueado (o una <span class="mono">ANTHROPIC_API_KEY</span>). Lee el transcript de Claude Code hoy; el lector para Cursor o Codex es una función.</p>
+        <a class="cta" href="https://github.com/MiguelOvejeroD/porque">Ver el repo en GitHub →</a>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Es una PoC, no un producto. El repo se construyó con porque: sus propias decisiones están en <span class="mono">decisions/</span>.</span>
+      <span>Miguel Ovejero · 2026</span>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var dots = Array.prototype.slice.call(document.querySelectorAll('.dots a'));
+    function current() {
+      var mid = window.innerHeight / 2, idx = 0;
+      slides.forEach(function (s, i) { var r = s.getBoundingClientRect(); if (r.top <= mid && r.bottom > mid) idx = i; });
+      return idx;
+    }
+    function paint() { var i = current(); dots.forEach(function (d, j) { d.classList.toggle('on', j === i); }); }
+    window.addEventListener('scroll', paint, { passive: true }); paint();
+    document.addEventListener('keydown', function (e) {
+      if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+      var i = current(), n = null;
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'j') n = Math.min(i + 1, slides.length - 1);
+      if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'k') n = Math.max(i - 1, 0);
+      if (e.key === 'Home') n = 0; if (e.key === 'End') n = slides.length - 1;
+      if (n !== null) { e.preventDefault(); slides[n].scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  })();
+</script>
+
+</html>

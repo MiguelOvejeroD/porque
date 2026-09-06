@@ -1,0 +1,6 @@
+{
+  "decisionsDir": "decisions",
+  "contextFiles": ["CLAUDE.md"],
+  "lang": "es",
+  "model": "sonnet"
+}
