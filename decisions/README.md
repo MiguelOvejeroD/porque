@@ -1,6 +1,6 @@
 # Registro de decisiones
 
-Cada archivo es una decisión con su razonamiento, capturada de sesiones de trabajo con IA por [porque](https://github.com/MiguelOvejeroD/porque). Editá a mano lo que quieras: el archivo es la fuente de verdad.
+Cada archivo es una decisión con su razonamiento, capturada de sesiones de trabajo con IA por [Porque](https://github.com/MiguelOvejeroD/porque). Editá a mano lo que quieras: el archivo es la fuente de verdad.
 
 | Fecha | Decisión | Estado | Alcance | Tags |
 |---|---|---|---|---|

@@ -18,5 +18,5 @@ Estas decisiones ya fueron tomadas por el equipo. Respetalas. Si una tarea te ob
 - **Cero dependencias de runtime, Node 18+, ESM** (2026-09-06) `package.json`, `src/**`: El paquete no tiene dependencias. Por qué: `npx --yes porque-cli init` tiene que correr en el repo de cualquier persona en segundos y sin sorpresas. → `decisions/2026-09-06-cero-dependencias-y-node-18.md`
 - **Capturar con el hook Stop de Claude Code, leyendo el transcript de forma incremental** (2026-09-06) `src/capture.js`, `src/transcript.js`, `src/init.js`: `porque init` registra un hook `Stop` en `.claude/settings.json` que ejecuta `porque capture --hook`. Por qué: La decisión nace en la sesión con la IA; capturarla ahí es lo único que no depende de la disciplina de nadie. → `decisions/2026-09-06-capturar-con-hook-stop-de-claude-code-de-forma-incremental.md`
 
-_Generado por porque · 6 decisiones activas_
+_Generado por Porque · 6 decisiones activas_
 <!-- porque:end -->

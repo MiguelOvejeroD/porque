@@ -1,10 +1,10 @@
-# porque
+# Porque
 
 **git blame for the why.**
 
 Git remembers *what* changed. Nobody remembers *why*. And now that every developer on the team codes with an AI assistant, the *why* lives in a chat window that gets closed at the end of the day.
 
-`porque` reads your AI coding sessions, extracts the decisions that were made in them (with their reasoning and the alternatives that were rejected), and stores them as plain markdown in your repo, right where the next session, yours or a teammate's, will read them.
+`Porque` reads your AI coding sessions, extracts the decisions that were made in them (with their reasoning and the alternatives that were rejected), and stores them as plain markdown in your repo, right where the next session, yours or a teammate's, will read them.
 
 ```
 $ porque why src/api/payments.ts
@@ -32,7 +32,7 @@ Thursday. Tomi asks *his* assistant to fix a validation bug in the same file. Hi
 
 Nobody did anything wrong. The team simply has no memory that survives the end of a session, and the AI multiplied the number of decisions per day without adding any memory to hold them.
 
-## What porque does
+## What Porque does
 
 ```
   you + your AI ──▶ session transcript ──▶ porque capture ──▶ decisions/*.md
@@ -156,7 +156,7 @@ The capture step reads Claude Code's transcript format today. Everything else (t
 
 ## Why this repo has a `decisions/` folder
 
-Because it was built with porque. The decisions taken while writing this tool, including a couple of dead ends, are in [`decisions/`](./decisions). Start there if you want to understand the code.
+Because it was built with Porque. The decisions taken while writing this tool, including a couple of dead ends, are in [`decisions/`](./decisions). Start there if you want to understand the code.
 
 ## Status
 

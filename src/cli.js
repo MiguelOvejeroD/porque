@@ -2,7 +2,7 @@ import { loadConfig } from './config.js';
 import { parseArgs, color } from './util.js';
 
 const HELP = `
-${color.bold('porque')} · git blame for the why
+${color.bold('Porque')} · git blame for the why
 
   ${color.cyan('porque init')} [--lang es|en] [--no-hook]   set up decisions/, CLAUDE.md block and the Claude Code hook
   ${color.cyan('porque capture')} --transcript <file.jsonl>  extract decisions from a Claude Code session
