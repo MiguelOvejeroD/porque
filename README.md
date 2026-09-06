@@ -4,21 +4,30 @@
 
 Git remembers *what* changed. Nobody remembers *why*. And now that every developer on the team codes with an AI assistant, the *why* lives in a chat window that gets closed at the end of the day.
 
-`Porque` reads your AI coding sessions, extracts the decisions that were made in them (with their reasoning and the alternatives that were rejected), and stores them as plain markdown in your repo, right where the next session, yours or a teammate's, will read them.
+`Porque` reads your AI coding sessions, extracts the decisions that were made in them (with their reasoning and the alternatives that were rejected), and stores them as plain markdown in your repo. Then it hands them back to the AI: an MCP tool lets any assistant ask *why is this file the way it is* before touching it, and record what it decides with you.
 
 ```
-$ porque why src/api/payments.ts
+Tomi ▸ El frontend manda los montos como decimal (1999.99) y la validación de
+       src/api/payments.ts los rechaza. Cambiá el schema para aceptar decimales
+       y listo, sin vueltas.
 
-● Usar zod para validación de requests                     2026-09-01 · Lu
-  Se adopta zod como librería de validación de body en la API...
-  Por qué: infiere tipos TS desde el schema evitando duplicar tipo y schema; el equipo
-  lo va a necesitar igual para validar config de entorno y respuestas de Stripe...
-  Descartado: yup (inferencia de tipos más débil) | JSON Schema de Fastify (dos fuentes de verdad)
+  ⚙ porque_why({ query: "src/api/payments.ts" })
 
-● Representar amount en centavos como entero               2026-09-01 · Lu
-  Por qué: los floats de JavaScript no representan exactamente los decimales...
-  Descartado: Decimal (decimal.js / numeric): dependencia extra y serialización como string
+Claude ▸ Hay una decisión activa que esto contradice directamente:
+       "Representar amount en centavos como entero", que dice explícitamente que
+       amount nunca debe ser decimal/float, para evitar los errores de precisión
+       de floats de JS en conciliaciones de pagos.
+
+       Si cambio el schema para aceptar 1999.99 tal cual, estaría revirtiendo esa
+       decisión en silencio. Lo que propongo en su lugar: mantener amount como
+       entero en centavos y convertir el decimal del frontend en el borde de la
+       validación (z.preprocess), rechazando si el resultado no es entero exacto.
+
+       ¿Querés que lo implemente así, o preferís revertir la decisión del equipo?
+       En ese caso debería registrarse con porque_record.
 ```
+
+That is a real, unedited Claude Code session from `npm run demo`. Tomi's assistant had never seen Lu's chat. It asked the repo.
 
 > Este README está en inglés porque el código lo está. La herramienta habla español por defecto (`--lang en` para inglés).
 
@@ -37,16 +46,19 @@ Nobody did anything wrong. The team simply has no memory that survives the end o
 ```
   you + your AI ──▶ session transcript ──▶ porque capture ──▶ decisions/*.md
                                                                    │
-        next session (yours or a teammate's) ◀── CLAUDE.md ◀───────┤
+   a teammate's AI ──▶ porque_why (MCP tool) ──▶ asks before editing ◀┤
+                   ◀── porque_record (MCP tool) ── records what it decides
                                                                    │
-                        porque why <path>  ◀───────────────────────┤
-                        porque check (PR)  ◀───────────────────────┘
+                                     CLAUDE.md (short notice) ◀────┤
+                                     porque check (PR)  ◀──────────┘
 ```
 
 1. **Capture.** A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) `Stop` hook runs `porque capture` after every response. It reads only the new part of the transcript, asks a model to extract *decisions* (not tasks), and writes one markdown file per decision: what, why, rejected alternatives, consequences, scope (paths), tags.
-2. **Sync.** The active decisions are rendered into a block inside `CLAUDE.md` (or any file you configure). Every AI session in the repo starts already knowing them and is told to speak up before contradicting one.
-3. **Ask.** `porque why src/auth` finds the decisions that govern a path (or mention a term) plus the git history, and prints them. `--ask` synthesizes an answer and tells you what is *not* recorded.
+2. **Serve it to the AI, not to the human.** `porque mcp` is a tiny MCP server (stdio, no dependencies) with two tools. `porque_why` returns the decisions that govern a path or mention a term, with their reasoning, plus the git history. `porque_record` lets the assistant write down a decision it just made with you. Any MCP client works: Claude Code, Cursor, Codex, Windsurf.
+3. **Nudge.** A short block in `CLAUDE.md` tells every session: before modifying a file or choosing a library, call `porque_why`; if you decide something a teammate could undo, call `porque_record`.
 4. **Check.** `porque check` in CI lists the decisions a PR touches. `--ask` lets the model judge whether the diff respects or contradicts each one, and comments on the PR.
+
+For humans, `porque why <path>` prints the same thing in the terminal.
 
 The records are plain markdown, committed with the code. No database, no service, no account. Delete the tool and you keep everything.
 
@@ -56,10 +68,10 @@ Requires Node 18+ and the `claude` CLI logged in (or `ANTHROPIC_API_KEY`).
 
 ```bash
 cd your-repo
-npx --yes porque-cli init          # creates decisions/, the CLAUDE.md block and the Stop hook
+npx --yes porque-cli init          # creates decisions/, .mcp.json, the CLAUDE.md block and the Stop hook
 ```
 
-Then work with Claude Code as usual. After each response you will see, in `decisions/`, the decisions that were just made. Commit them.
+Then work with Claude Code as usual. After each response you will see, in `decisions/`, the decisions that were just made. Commit them. Your assistant now has the `porque_why` and `porque_record` tools (Claude Code picks up `.mcp.json` automatically; for Cursor or Codex, point their MCP config at `npx --yes porque-cli mcp`).
 
 ## Try it in 60 seconds without an existing project
 
@@ -70,7 +82,7 @@ git clone https://github.com/MiguelOvejeroD/porque && cd porque
 npm run demo
 ```
 
-It creates a throwaway repo, replays the session, and asks `porque why`. Then, to see the PR check catch Thursday's mistake:
+It creates a throwaway repo, replays Lu's Tuesday session, and then runs Tomi's Thursday session for real: a Claude Code call with the MCP tool, told to accept decimal amounts "sin vueltas". Watch it ask `porque_why` first. Then, to see the PR check catch the mistake if someone pushes it anyway:
 
 ```bash
 cd demo/tmp/checkout-api
@@ -99,6 +111,7 @@ porque · 3 decisión(es) afectada(s) por este cambio
 | `porque sync` | Regenerates the block in `CLAUDE.md` and `decisions/README.md`. Runs automatically after capture. |
 | `porque check [--base main] [--format md] [--ask] [--strict]` | Which decisions does this branch touch. `--ask` judges respects/contradicts. `--strict` exits 1 on contradiction. |
 | `porque add "title"` | Record a decision by hand. Not everything happens inside an AI session. |
+| `porque mcp` | MCP server over stdio exposing `porque_why` and `porque_record`. `init` registers it in `.mcp.json`. |
 
 ## A decision record
 
@@ -152,7 +165,7 @@ Add `AGENTS.md`, `.cursor/rules/decisions.mdc` or any other file to `contextFile
 
 ## Other tools than Claude Code
 
-The capture step reads Claude Code's transcript format today. Everything else (the records, `why`, `sync`, `check`, the `CLAUDE.md` block) is tool-agnostic. Adding a reader for another assistant's session log is one function in `src/transcript.js`. PRs welcome.
+The MCP server works with any client today: add `npx --yes porque-cli mcp` to Cursor's, Codex's or Windsurf's MCP config and their assistants get `porque_why` and `porque_record`. The automatic *capture* step reads Claude Code's transcript format; adding a reader for another assistant's session log is one function in `src/transcript.js`. Until then, `porque_record` is how other assistants write decisions. PRs welcome.
 
 ## Why this repo has a `decisions/` folder
 
@@ -160,10 +173,10 @@ Because it was built with Porque. The decisions taken while writing this tool, i
 
 ## Status
 
-Proof of concept. It works, it is small (zero dependencies, ~700 lines), and it is opinionated. Things that would come next:
+Proof of concept. It works, it is small (zero dependencies, ~900 lines), and it is opinionated. Things that would come next:
 
 - Readers for Cursor, Codex and Copilot session logs.
-- `porque why` as an MCP tool, so the assistant can ask instead of the human.
+- A `PreToolUse` hook that injects the relevant decisions right before an edit, so the assistant does not even have to ask.
 - Linking decisions to commits automatically (`Decision:` trailer).
 - A conflict warning *before* the assistant acts, not only in the PR.
 

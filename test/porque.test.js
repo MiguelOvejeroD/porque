@@ -57,3 +57,9 @@ test('renderContextBlock lists active decisions between markers', () => {
   assert.ok(!block.includes('**Old**'));
   assert.match(block, /1 active decisions/);
 });
+
+test('renderWhy says so when nothing is recorded', async () => {
+  const { renderWhy } = await import('../src/mcp.js');
+  const cfg = { lang: 'en', decisionsPath: path.join(os.tmpdir(), 'porque-empty-' + Date.now()), root: os.tmpdir() };
+  assert.match(renderWhy(cfg, 'src/nothing'), /No recorded decisions/);
+});

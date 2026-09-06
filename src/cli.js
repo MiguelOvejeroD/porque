@@ -12,6 +12,7 @@ ${color.bold('Porque')} · git blame for the why
   ${color.cyan('porque check')} [--base main] [--format md] [--ask] [--strict]
                                               which recorded decisions does this change touch?
   ${color.cyan('porque add')} "title"                         record a decision by hand (opens an editor)
+  ${color.cyan('porque mcp')}                                 MCP server (stdio): gives your AI the tools porque_why and porque_record
 
   Records live in decisions/*.md. Plain markdown, yours, versioned with the code.
   Docs: https://github.com/MiguelOvejeroD/porque
@@ -30,6 +31,7 @@ export async function run(argv) {
     case 'sync': return (await import('./sync.js')).sync(cfg, {}) && 0;
     case 'check': return (await import('./check.js')).check(cfg, args);
     case 'add': return (await import('./add.js')).add(cfg, args);
+    case 'mcp': return (await import('./mcp.js')).serve(cfg);
     default:
       process.stderr.write(`porque: unknown command "${cmd}"\n${HELP}`);
       return 1;

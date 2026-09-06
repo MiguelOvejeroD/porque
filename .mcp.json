@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "porque": { "command": "node", "args": ["bin/porque.js", "mcp"] }
+  }
+}

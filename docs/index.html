@@ -166,7 +166,7 @@
 </style>
 
 <nav class="dots" aria-label="Slides">
-  <a href="#s1" class="on" aria-label="Portada"></a><a href="#s2" aria-label="El problema"></a><a href="#s3" aria-label="Por qué ahora"></a><a href="#s4" aria-label="La solución"></a><a href="#s5" aria-label="porque why"></a><a href="#s6" aria-label="porque check"></a><a href="#s7" aria-label="Probalo"></a>
+  <a href="#s1" class="on" aria-label="Portada"></a><a href="#s2" aria-label="El problema"></a><a href="#s3" aria-label="Por qué ahora"></a><a href="#s4" aria-label="La solución"></a><a href="#s5" aria-label="La IA pregunta"></a><a href="#s6" aria-label="porque check"></a><a href="#s7" aria-label="Probalo"></a>
 </nav>
 <div class="hint mono">↑ ↓ para navegar</div>
 
@@ -252,72 +252,67 @@
 
 <!-- 4 · La solución -->
 <section class="slide" id="s4">
-  <aside class="gutter mono"><span class="n">src/</span><span class="ref">capture.js</span><span class="ref">sync.js</span><span class="ref">why.js · check.js</span><span class="spacer"></span><span class="hide-m">4 / 7</span></aside>
+  <aside class="gutter mono"><span class="n">src/</span><span class="ref">capture.js</span><span class="ref">mcp.js</span><span class="ref">check.js</span><span class="spacer"></span><span class="hide-m">4 / 7</span></aside>
   <div class="page">
     <div class="eyebrow">La solución</div>
-    <h2 class="display">Capturar el por qué donde nace y dejarlo donde la próxima sesión lo lee.</h2>
-    <div class="flow" role="img" aria-label="Flujo: sesión con IA, hook Stop, decisions/*.md, CLAUDE.md, próxima sesión. Desde decisions salen porque why y porque check.">
+    <h2 class="display">Capturar el por qué donde nace y servírselo a la IA, no a la persona.</h2>
+    <div class="flow" role="img" aria-label="Flujo: sesión con IA, hook Stop, decisions/*.md, tool MCP porque_why, la IA del compañero pregunta antes de editar. Desde decisions salen porque_record y porque check.">
       <div class="node"><div class="t">Sesión con IA</div><div class="d">Lu trabaja normal con Claude Code. Nadie escribe nada extra.</div><div class="m mono">transcript .jsonl</div></div>
       <div class="node"><div class="t">Hook Stop</div><div class="d">Al final de cada respuesta lee solo lo nuevo del transcript y le pide al modelo decisiones, no tareas.</div><div class="m mono">porque capture</div></div>
-      <div class="node core"><div class="t">decisions/*.md</div><div class="d">Un archivo por decisión: qué, por qué, alternativas descartadas, consecuencias, scope. Markdown, en el repo.</div><div class="m mono">git add decisions/</div></div>
-      <div class="node"><div class="t">CLAUDE.md</div><div class="d">Las activas se inyectan en el contexto compartido con una instrucción: respetarlas y avisar antes de contradecir.</div><div class="m mono">porque sync</div></div>
-      <div class="node"><div class="t">Próxima sesión</div><div class="d">La de Tomi, el jueves. Arranca sabiendo lo que decidió Lu el martes.</div><div class="m mono">contexto compartido</div></div>
+      <div class="node"><div class="t">decisions/*.md</div><div class="d">Un archivo por decisión: qué, por qué, alternativas descartadas, consecuencias, scope. Markdown, en el repo.</div><div class="m mono">git add decisions/</div></div>
+      <div class="node core"><div class="t">Tool MCP</div><div class="d">Un servidor MCP de 100 líneas le da a cualquier asistente la tool <b>porque_why</b>: "¿qué se decidió sobre este path y por qué?"</div><div class="m mono">porque mcp</div></div>
+      <div class="node"><div class="t">La IA de Tomi</div><div class="d">El jueves, antes de tocar payments.ts, pregunta. Y se entera de lo que decidió la IA de Lu el martes.</div><div class="m mono">porque_why("src/api/…")</div></div>
     </div>
     <div class="flow2">
       <div class="drop">↓</div>
       <div class="out">
-        <div class="node"><div class="t mono">porque why src/api/payments.ts</div><div class="d">Qué decisiones gobiernan este path, con su razonamiento, más el git log. Y qué no está registrado.</div></div>
+        <div class="node"><div class="t mono">porque_record</div><div class="d">La segunda tool: el asistente deja escrita una decisión que acaba de tomar con vos. Cursor, Codex y cualquier cliente MCP también pueden.</div></div>
         <div class="node"><div class="t mono">porque check --ask</div><div class="d">En el PR: qué decisiones toca el cambio y si las respeta o las contradice. Informa; bloquea solo con --strict.</div></div>
       </div>
     </div>
+    <p class="muted">CLAUDE.md queda con un aviso de tres líneas: "antes de tocar un archivo, llamá porque_why". Para humanos existe <span class="mono">porque why &lt;path&gt;</span>, pero el humano es el caso raro.</p>
     <p class="muted">Sin base de datos, sin servicio, sin cuenta. Cero dependencias. Si borrás la herramienta, los archivos siguen ahí.</p>
   </div>
 </section>
 
-<!-- 5 · why -->
+<!-- 5 · la IA pregunta -->
 <section class="slide" id="s5">
-  <aside class="gutter mono"><span class="n">$</span><span class="ref">porque why</span><span class="hide-m">salida real del demo</span><span class="spacer"></span><span class="hide-m">5 / 7</span></aside>
+  <aside class="gutter mono"><span class="n">mcp</span><span class="ref">porque_why</span><span class="hide-m">sesión real, sin editar</span><span class="spacer"></span><span class="hide-m">5 / 7</span></aside>
   <div class="page">
     <div class="two">
       <div class="stack" style="gap:1.25rem">
-        <div class="eyebrow">Así se ve</div>
-        <h2 class="display">"¿Por qué este archivo es así?"</h2>
-        <p>Salida real de la PoC sobre la sesión del martes. Tres decisiones, cada una con el razonamiento que la IA de Lu dio en el chat y las alternativas que descartó. Nadie escribió esto a mano.</p>
-        <p class="muted">Cuando no hay nada registrado, lo dice: <em>"Eso también es información: nadie dejó escrito por qué esto es así."</em></p>
+        <div class="eyebrow">El jueves, con Porque</div>
+        <h2 class="display">La IA de Tomi le pregunta al repo antes de tocar.</h2>
+        <p>Sesión real de Claude Code, sin editar. Le pedimos que rompa la decisión del martes "sin vueltas". Nadie le dijo que consulte nada: tenía la tool y la usó.</p>
+        <p>No se negó a hacer el trabajo. Encontró el por qué original, propuso una salida que lo respeta, y dejó la reversión como una decisión explícita del equipo, que se registra, no como un accidente.</p>
+        <p class="muted">Este es el cambio de fondo: la interfaz de consulta no es un comando para personas. Es una tool para la IA de tu compañero.</p>
       </div>
-      <div class="term mono" role="img" aria-label="Terminal con la salida de porque why src/api/payments.ts">
-        <div class="bar"><i></i><i></i><i></i><span>checkout-api · zsh</span></div>
-<pre><span class="p">$</span> porque why src/api/payments.ts
+      <div class="term mono" role="img" aria-label="Sesión de Claude Code donde el asistente llama a la tool porque_why y se niega a revertir en silencio una decisión del equipo">
+        <div class="bar"><i></i><i></i><i></i><span>checkout-api · claude</span></div>
+<pre><span class="c">Tomi ▸</span> El frontend manda los montos como decimal (1999.99) y la
+       validación de src/api/payments.ts los rechaza. Cambiá el schema
+       para aceptar decimales y listo, sin vueltas.
 
-<b>porque src/api/payments.ts</b>
+  <span class="g">⚙ porque_why</span><span class="d">({ query: "src/api/payments.ts" })</span>
+  <span class="g">⚙ Read</span><span class="d">(src/api/payments.ts)</span>
 
-<span class="g">●</span> <b>Usar zod para validación de requests</b>  <span class="d">2026-09-01 · Lu</span>
-  Se adopta zod como librería de validación de body en la API,
-  infiriendo el tipo PaymentRequest directamente del schema.
-  <span class="c">Por qué:</span> infiere tipos TS desde el schema evitando duplicar tipo y
-  schema; el equipo lo va a necesitar igual para validar config de
-  entorno y respuestas de Stripe; sus errores son legibles para el front.
-  <span class="m">Descartado:</span> yup: inferencia de tipos más débil <span class="d">|</span> JSON Schema de
-  Fastify (ajv): dos fuentes de verdad (schema y tipo)
-  <span class="d">decisions/2026-09-01-usar-zod-para-validacion-de-requests.md · src/api/**</span>
+<span class="m">Claude ▸</span> Hay una decisión activa que esto contradice directamente:
+       <b>"Representar amount en centavos como entero"</b>, que dice
+       explícitamente que amount nunca debe ser decimal/float, para
+       evitar los errores de precisión de floats de JS en
+       conciliaciones de pagos.
 
-<span class="g">●</span> <b>Idempotencia de pagos vía header Idempotency-Key + Redis</b>  <span class="d">2026-09-01 · Lu</span>
-  POST /payments requiere un header Idempotency-Key (UUID).
-  <span class="c">Por qué:</span> evitar doble cobro por doble click o reintentos. Redis y no
-  Postgres porque ya está en el stack, el TTL es nativo y no ensucia la
-  tabla de pagos. 24h replica la convención de Stripe.
-  <span class="m">Descartado:</span> tabla en Postgres: expiración manual y basura de reintentos
-  <span class="d">decisions/2026-09-01-idempotencia-de-pagos-via-header-idempotency-key-redis.md</span>
+       Si cambio el schema para aceptar 1999.99 tal cual, estaría
+       <span class="r">revirtiendo esa decisión en silencio</span>. El motivo sigue siendo
+       válido: el frontend no está siguiendo la convención acordada.
 
-<span class="g">●</span> <b>Representar amount en centavos como entero</b>  <span class="d">2026-09-01 · Lu</span>
-  <span class="c">Por qué:</span> los floats de JavaScript no representan exactamente los
-  decimales (0.1 + 0.2 !== 0.3); en pagos eso genera diferencias de un
-  centavo en conciliaciones. Convención de Stripe y Mercado Pago.
-  <span class="m">Descartado:</span> Decimal (decimal.js / numeric): dependencia extra, string en JSON
-  <span class="d">decisions/2026-09-01-representar-amount-en-centavos-como-entero.md</span>
+       Lo que propongo en su lugar: mantener amount como entero en
+       centavos puertas adentro y convertir el decimal del frontend en
+       el borde de la validación (z.preprocess), rechazando si el
+       resultado no es un entero exacto.
 
-<span class="d">Historial git de src/api/payments.ts:</span>
-<span class="d">  3f9a2c1 2026-09-01 Lu             feat(payments): POST /payments</span></pre>
+       ¿Querés que lo implemente así, o preferís revertir la decisión
+       del equipo? En ese caso debería registrarse con <span class="g">porque_record</span>.</pre>
       </div>
     </div>
   </div>
@@ -352,10 +347,10 @@
 <span class="d">  src/api/payments.ts · decisions/2026-09-01-…</span></pre>
       </div>
       <div class="stack" style="gap:1.25rem">
-        <div class="eyebrow">El jueves, con Porque</div>
-        <h2 class="display">El PR de Tomi ya no pasa en silencio.</h2>
-        <p>Salida real del check sobre el commit del jueves. Las tres decisiones del martes aparecen en el PR con su razonamiento original y el veredicto del modelo.</p>
-        <p>Y antes de eso: la IA de Tomi ya arrancó la sesión con las decisiones de Lu en su contexto. Lo más probable es que el PR del jueves nunca haya existido así.</p>
+        <div class="eyebrow">Y si igual lo pushea</div>
+        <h2 class="display">El PR tampoco pasa en silencio.</h2>
+        <p>Segunda red. Salida real del check sobre un commit que sí rompe las tres decisiones. Aparecen en el PR con su razonamiento original y el veredicto del modelo.</p>
+        <p>La tool evita el error en el momento de escribir; el check lo atrapa si alguien lo escribió igual, con otra herramienta o sin la tool.</p>
         <p class="muted">Contradecir una decisión a veces es correcto. Lo que no puede pasar es hacerlo sin saberlo. Por eso el check informa y solo bloquea con <span class="mono">--strict</span>.</p>
       </div>
     </div>
@@ -371,13 +366,13 @@
     <div class="two" style="align-items:start">
       <div class="steps">
         <div class="step"><p>Cloná el repo y corré el demo. Crea un repo de prueba, reproduce la sesión del martes y pregunta <span class="mono">porque why</span>.</p></div>
-        <div class="step"><p>En tu propio repo: <span class="mono">npx --yes porque-cli init</span>. Crea <span class="mono">decisions/</span>, el bloque en <span class="mono">CLAUDE.md</span> y el hook de Claude Code. Después trabajás como siempre.</p></div>
+        <div class="step"><p>En tu propio repo: <span class="mono">npx --yes porque-cli init</span>. Crea <span class="mono">decisions/</span>, el <span class="mono">.mcp.json</span> con la tool, el aviso en <span class="mono">CLAUDE.md</span> y el hook de Claude Code. Después trabajás como siempre.</p></div>
         <div class="step"><p>Sumá el workflow de GitHub Actions del repo para que cada PR muestre las decisiones que toca.</p></div>
       </div>
       <div class="stack">
         <div class="cmd mono"><span class="p">$</span> git clone https://github.com/MiguelOvejeroD/porque<br><span class="p">$</span> cd porque &amp;&amp; npm run demo</div>
-        <div class="cmd mono"><span class="p">$</span> npx --yes porque-cli init<br><span class="p">$</span> porque why src/lo-que-sea</div>
-        <p class="muted" style="font-size:.95rem">Necesita Node 18+ y el CLI <span class="mono">claude</span> logueado (o una <span class="mono">ANTHROPIC_API_KEY</span>). Lee el transcript de Claude Code hoy; el lector para Cursor o Codex es una función.</p>
+        <div class="cmd mono"><span class="p">$</span> npx --yes porque-cli init<br><span class="d" style="color:var(--ink-2)"># Cursor / Codex: MCP server → npx --yes porque-cli mcp</span></div>
+        <p class="muted" style="font-size:.95rem">Necesita Node 18+ y el CLI <span class="mono">claude</span> logueado (o una <span class="mono">ANTHROPIC_API_KEY</span>). La tool MCP funciona con Claude Code, Cursor, Codex o cualquier cliente MCP. La captura automática lee el transcript de Claude Code hoy.</p>
         <a class="cta" href="https://github.com/MiguelOvejeroD/porque">Ver el repo en GitHub →</a>
       </div>
     </div>

@@ -13,8 +13,8 @@ export function renderContextBlock(cfg, decisions) {
   const es = cfg.lang === 'es';
   const lines = [START,
     `## ${cfg.h.context}`, '',
-    es ? `Estas decisiones ya fueron tomadas por el equipo. Respetalas. Si una tarea te obliga a contradecir alguna, decilo explícitamente antes de hacerlo y explicá por qué. El detalle completo está en \`${cfg.decisionsDir}/\`. Consultá con \`porque why <path>\`.`
-       : `The team already made these decisions. Respect them. If a task forces you to contradict one, say so explicitly before doing it and explain why. Full detail lives in \`${cfg.decisionsDir}/\`. Query with \`porque why <path>\`.`,
+    es ? `Estas decisiones ya fueron tomadas por el equipo. Respetalas. Si una tarea te obliga a contradecir alguna, decilo explícitamente antes de hacerlo y explicá por qué. Antes de modificar un archivo o elegir una librería, patrón o formato, consultá la tool \`porque_why\` con el path o el tema. Si tomás con el usuario una decisión que un compañero podría deshacer sin saberlo, registrala con \`porque_record\`. El detalle completo está en \`${cfg.decisionsDir}/\`.`
+       : `The team already made these decisions. Respect them. If a task forces you to contradict one, say so explicitly before doing it and explain why. Before modifying a file or choosing a library, pattern or format, call the \`porque_why\` tool with the path or topic. If you and the user make a decision a teammate could undo without knowing, record it with \`porque_record\`. Full detail lives in \`${cfg.decisionsDir}/\`.`,
     ''];
   if (!active.length) lines.push(es ? '_Todavía no hay decisiones registradas._' : '_No decisions recorded yet._');
   for (const d of active) {
