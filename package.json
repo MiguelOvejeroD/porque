@@ -1,7 +1,7 @@
 {
   "name": "porque-cli",
   "version": "0.1.0",
-  "description": "git blame for the why. Captures the decisions your team makes while coding with AI and puts them where the next AI session can read them.",
+  "description": "Construir dejando huella. git blame for the why. Captures the decisions your team makes while coding with AI and puts them where the next AI session can read them.",
   "type": "module",
   "bin": { "porque": "bin/porque.js" },
   "files": ["bin", "src", "README.md", "LICENSE"],

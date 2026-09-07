@@ -1,8 +1,8 @@
 # Porque
 
-**git blame for the why.**
+**Construir dejando huella.** git blame for the why.
 
-Git remembers *what* changed. Nobody remembers *why*. And now that every developer on the team codes with an AI assistant, the *why* lives in a chat window that gets closed at the end of the day.
+Decisions are never documented; only their conclusions are. Git remembers *what* changed. Nobody remembers *why*. And now that every developer on the team codes with an AI assistant, the *why* lives in a chat window that gets closed at the end of the day.
 
 `Porque` reads your AI coding sessions, extracts the decisions that were made in them (with their reasoning and the alternatives that were rejected), and stores them as plain markdown in your repo. Then it hands them back to the AI: an MCP tool lets any assistant ask *why is this file the way it is* before touching it, and record what it decides with you.
 
