@@ -19,6 +19,7 @@ export function loadDecisions(cfg) {
         author: data.author || '',
         status: data.status || 'active',
         supersedes: data.supersedes || null,
+        supersededBy: data.superseded_by || null,
         scope: toArr(data.scope), tags: toArr(data.tags),
         source: data.source || '', confidence: data.confidence || '',
         body, sections,
@@ -43,12 +44,35 @@ function splitSections(body) {
 
 const findSection = (sections, re) => sections.find((s) => re.test(s.title))?.text || '';
 
+// Resolves the supersedes chain in memory. writeDecision already marks the old file on disk;
+// this covers records edited by hand (or written before superseded_by existed).
 export function applySupersedes(decisions) {
   const byId = new Map(decisions.map((d) => [d.id, d]));
   for (const d of decisions) {
-    if (d.supersedes && byId.has(d.supersedes) && d.status === 'active') byId.get(d.supersedes).status = 'superseded';
+    if (!d.supersedes || !byId.has(d.supersedes)) continue;
+    const old = byId.get(d.supersedes);
+    old.status = 'superseded';
+    if (!old.supersededBy) old.supersededBy = d.id;
   }
   return decisions;
+}
+
+// Marks an existing record as replaced by `byId`: status: superseded + superseded_by in its frontmatter.
+// The file keeps its body untouched, so the old reasoning stays readable in the repo and on GitHub.
+export function markSuperseded(cfg, oldId, byId) {
+  const file = path.join(cfg.decisionsPath, oldId + '.md');
+  if (!fs.existsSync(file)) return false;
+  const { data, body } = fm.parse(fs.readFileSync(file, 'utf8'));
+  const next = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (k === 'superseded_by') continue;
+    next[k] = k === 'status' ? 'superseded' : v;
+    if (k === 'supersedes') next.superseded_by = byId; // keep the chain fields together
+  }
+  if (!next.status) next.status = 'superseded';
+  if (!next.superseded_by) next.superseded_by = byId;
+  fs.writeFileSync(file, fm.stringify(next, body));
+  return true;
 }
 
 export function newDecisionId(cfg, title, date = today()) {
@@ -66,6 +90,7 @@ export function writeDecision(cfg, d, meta) {
   const data = {
     id, title: d.title, date, author: meta.author || 'unknown', status: 'active',
     supersedes: d.supersedes || null,
+    superseded_by: null,
     scope: d.scope || [], tags: d.tags || [],
     confidence: d.confidence || 'medium',
     source: meta.source || 'manual',
@@ -80,7 +105,8 @@ export function writeDecision(cfg, d, meta) {
   ].join('\n');
   const file = path.join(cfg.decisionsPath, id + '.md');
   fs.writeFileSync(file, fm.stringify(data, body));
-  return { id, file, rel: path.relative(cfg.root, file) };
+  const superseded = d.supersedes && d.supersedes !== id ? markSuperseded(cfg, d.supersedes, id) : false;
+  return { id, file, rel: path.relative(cfg.root, file), superseded: superseded ? d.supersedes : null };
 }
 
 export function summarize(d) {

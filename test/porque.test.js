@@ -63,3 +63,40 @@ test('renderWhy says so when nothing is recorded', async () => {
   const cfg = { lang: 'en', decisionsPath: path.join(os.tmpdir(), 'porque-empty-' + Date.now()), root: os.tmpdir() };
   assert.match(renderWhy(cfg, 'src/nothing'), /No recorded decisions/);
 });
+
+test('writeDecision with supersedes marks the old record on disk and why shows the chain', async () => {
+  const { writeDecision, loadDecisions, applySupersedes } = await import('../src/decisions.js');
+  const { findDecisions } = await import('../src/why.js');
+  const { renderWhy } = await import('../src/mcp.js');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'porque-chain-'));
+  const cfg = { lang: 'en', h: HEADINGS.en, root, decisionsDir: 'decisions', decisionsPath: path.join(root, 'decisions') };
+  const old = writeDecision(cfg, { title: 'Use yup', decision: 'Use yup.', why: 'Familiar.', scope: ['src/api/**'], tags: ['validation'] }, { author: 'Lu', date: '2026-09-01' });
+  const neu = writeDecision(cfg, { title: 'Use zod', decision: 'Use zod.', why: 'Types.', scope: ['src/api/**'], tags: ['validation'], supersedes: old.id }, { author: 'Tomi', date: '2026-09-03' });
+  assert.equal(neu.superseded, old.id);
+
+  const oldFile = fs.readFileSync(old.file, 'utf8');
+  assert.match(oldFile, /^status: superseded$/m);
+  assert.match(oldFile, new RegExp(`^superseded_by: ${neu.id}$`, 'm'));
+  assert.match(oldFile, /## Why\n\nFamiliar\./); // body untouched
+
+  const all = applySupersedes(loadDecisions(cfg));
+  assert.deepEqual(all.map((d) => [d.id, d.status, d.supersedes, d.supersededBy]), [
+    [neu.id, 'active', old.id, null],
+    [old.id, 'superseded', null, neu.id],
+  ]);
+  assert.deepEqual(findDecisions(cfg, '').map((h) => h.d.id), [neu.id]);           // no query: active only
+  assert.deepEqual(findDecisions(cfg, 'src/api/x.ts').map((h) => h.d.id), [neu.id, old.id]); // query: full history
+
+  const out = renderWhy(cfg, 'src/api/x.ts');
+  assert.match(out, new RegExp(`Supersedes: ${old.id}`));
+  assert.match(out, new RegExp(`SUPERSEDED by ${neu.id}`));
+});
+
+test('applySupersedes resolves hand-edited chains without superseded_by', async () => {
+  const { applySupersedes } = await import('../src/decisions.js');
+  const a = { id: 'a', status: 'active', supersedes: null, supersededBy: null };
+  const b = { id: 'b', status: 'active', supersedes: 'a', supersededBy: null };
+  applySupersedes([a, b]);
+  assert.equal(a.status, 'superseded');
+  assert.equal(a.supersededBy, 'b');
+});

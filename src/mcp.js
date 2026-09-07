@@ -52,6 +52,8 @@ export function renderWhy(cfg, query) {
     for (const { d } of hits.slice(0, 10)) {
       lines.push(`## ${d.title}`);
       lines.push(`${d.date} · ${d.author} · ${d.status}${d.scope.length ? ` · scope: ${d.scope.join(', ')}` : ''} · ${d.rel}`);
+      if (d.supersedes) lines.push(es ? `Reemplaza a: ${d.supersedes}` : `Supersedes: ${d.supersedes}`);
+      if (d.supersededBy) lines.push(es ? `REEMPLAZADA por ${d.supersededBy}: ya no rige, se conserva como historia.` : `SUPERSEDED by ${d.supersededBy}: no longer governs, kept as history.`);
       lines.push(d.body.replace(/^#\s.*\n/, '').trim(), '');
     }
   }
@@ -83,7 +85,9 @@ export function serve(cfg) {
           if (name === 'porque_record') {
             const r = writeDecision(cfg, { ...args, alternatives: args.alternatives || [], consequences: args.consequences || '-', tags: args.tags || [], confidence: 'high' }, { author: gitAuthor(cfg.root), source: 'mcp porque_record' });
             sync(cfg, { quiet: true });
-            return reply(id, { content: [{ type: 'text', text: (cfg.lang === 'es' ? 'Decisión registrada en ' : 'Decision recorded at ') + r.rel + (cfg.lang === 'es' ? '. CLAUDE.md actualizado.' : '. CLAUDE.md updated.') }] });
+            const es = cfg.lang === 'es';
+            const sup = r.superseded ? (es ? ` Reemplaza a ${r.superseded}, que quedó marcada como superseded.` : ` Supersedes ${r.superseded}, now marked superseded.`) : '';
+            return reply(id, { content: [{ type: 'text', text: (es ? 'Decisión registrada en ' : 'Decision recorded at ') + r.rel + '.' + sup + (es ? ' CLAUDE.md actualizado.' : ' CLAUDE.md updated.') }] });
           }
           return reply(id, { content: [{ type: 'text', text: `Unknown tool ${name}` }], isError: true });
         } catch (e) {

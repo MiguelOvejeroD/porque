@@ -50,6 +50,8 @@ export async function why(cfg, { positional, flags }) {
     if (d.why) w(`  ${color.cyan(es ? 'Por qué:' : 'Why:')} ${wrap(firstSentence(d.why) === d.why.trim() ? d.why : d.why, 2)}`);
     const alts = d.sections.find((s) => /alternativ/i.test(s.title))?.text;
     if (alts && alts !== '-') w(`  ${color.magenta(es ? 'Descartado:' : 'Rejected:')} ${alts.split('\n').map((l) => l.replace(/^-\s*/, '').replace(/\*\*/g, '')).join(color.dim(' | '))}`);
+    if (d.supersedes) w(`  ${color.dim(es ? 'Reemplaza a:' : 'Supersedes:')} ${d.supersedes}`);
+    if (d.supersededBy) w(`  ${color.yellow(es ? 'Reemplazada por:' : 'Superseded by:')} ${d.supersededBy}`);
     w(`  ${color.dim(d.rel + (d.scope.length ? `  ·  ${d.scope.join(', ')}` : '') + (reasons.length ? `  ·  match: ${reasons.join(', ')}` : ''))}`);
     w('');
   }

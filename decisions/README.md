@@ -4,6 +4,7 @@ Cada archivo es una decisión con su razonamiento, capturada de sesiones de trab
 
 | Fecha | Decisión | Estado | Alcance | Tags |
 |---|---|---|---|---|
+| 2026-09-07 | [Nunca borrar decisiones: reemplazar con supersedes y marcar la vieja con superseded_by](./2026-09-07-nunca-borrar-decisiones-reemplazar-con-supersedes-y-marcar-l.md) | active | src/decisions.js, src/why.js | historial, supersedes, formato |
 | 2026-09-06 | [Usar `claude -p` como proveedor por defecto, con la API como fallback](./2026-09-06-usar-claude-p-como-proveedor-por-defecto.md) | active | src/llm.js | llm, auth, distribucion |
 | 2026-09-06 | [Servir las decisiones a la IA vía tool MCP; el comando `why` queda como vista humana](./2026-09-06-servir-las-decisiones-a-la-ia-via-mcp-no-al-humano.md) | active | src/mcp.js, src/why.js | mcp, interfaz, equipo |
 | 2026-09-06 | [Registros en markdown plano dentro del repo, sin base de datos ni servicio](./2026-09-06-registros-en-markdown-plano-dentro-del-repo.md) | active | decisions/**, src/decisions.js | arquitectura, formato, portabilidad |

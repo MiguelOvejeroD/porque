@@ -122,7 +122,8 @@ title: Usar zod para validación de requests
 date: 2026-09-01
 author: Lu
 status: active            # active | superseded
-supersedes: null
+supersedes: null          # id of the decision this one replaced
+superseded_by: null       # filled in automatically when a newer decision supersedes this one
 scope:
   - src/api/**
   - package.json
@@ -146,7 +147,9 @@ Infiere tipos TS desde el schema...
 Toda validación nueva usa zod. Para revisar esto hay que...
 ```
 
-Edit it by hand whenever you want. The file is the source of truth; `porque sync` picks up your edits. To reverse a decision, record a new one with `supersedes: <old id>`.
+Edit it by hand whenever you want. The file is the source of truth; `porque sync` picks up your edits.
+
+**Nothing is ever deleted.** To reverse a decision, record a new one with `supersedes: <old id>` (the capture step and `porque_record` do this for you). The old file stays in the repo with `status: superseded` and `superseded_by: <new id>`, so the whole chain is readable from either end: `porque why <path>` and `porque_why` show both records, the old one flagged as superseded and pointing at its replacement. Only `CLAUDE.md` and `porque check` filter down to active decisions.
 
 ## Configuration (`.porque.json`)
 
